@@ -10,20 +10,37 @@ const App = () => {
   const [gameData, setGameData] = useState(""); // State to store game data
   const [showDisconnectionMessage, setShowDisconnectionMessage] =
     useState(false);
+  const [opponentGameChoice, setOpponentGameChoice] = useState("");
+  const [opponentIsReady, setOpponentIsReady] = useState(false);
+  const [playerIsReady, setPlayerIsReady] = useState(false);
 
   useEffect(() => {
     const newSocket = io("http://localhost:3000");
     setSocket(newSocket);
 
     newSocket.on("matched", (receivedMatchId) => {
+      // Reset states for a new match
       setIsSearching(false);
       setIsMatched(true);
-      setMatchId(receivedMatchId); // Store the received matchId
+      setMatchId(receivedMatchId);
+      setOpponentIsReady(false);
+      setPlayerIsReady(false);
+      setOpponentGameChoice("");
+      setGameType("");
     });
 
     newSocket.on("startGame", (data) => {
       // Handle the game start here
       setGameData(data);
+    });
+
+    newSocket.on("opponentGameChoice", (choice) => {
+      setOpponentGameChoice(choice);
+    });
+
+    newSocket.on("opponentReady", () => {
+      console.log("Opponent ready received");
+      setOpponentIsReady(true);
     });
 
     newSocket.on("opponentDisconnected", () => {
@@ -57,24 +74,79 @@ const App = () => {
   const handleReady = () => {
     const playerId = localStorage.getItem("playerId");
     socket.emit("playerReady", { matchId, playerId });
+    setPlayerIsReady(true);
   };
 
+  const gameButtonClass = (choice) =>
+    `px-4 py-2 rounded ${
+      gameType === choice
+        ? "bg-green-500"
+        : opponentGameChoice === choice
+        ? "bg-blue-500"
+        : "bg-gray-200"
+    }`;
+
+  const opponentReadyButtonClass = `px-4 py-2 rounded ${
+    opponentIsReady ? "bg-amber-500" : "bg-gray-200"
+  }`;
+
+  const playerReadyButtonClass = `px-4 py-2 rounded ${
+    playerIsReady && gameType ? "border-2 border-green-500" : "bg-gray-200"
+  }`;
+
   return (
-    <div className="App">
-      <h1>Multiplayer Game</h1>
-      {showDisconnectionMessage && <p>Your opponent has disconnected.</p>}
+    <div className="App bg-gray-100 min-h-screen flex flex-col items-center justify-center">
+      <h1 className="text-4xl font-bold text-gray-800 mb-6">
+        Multiplayer Game
+      </h1>
+
+      {showDisconnectionMessage && (
+        <p className="text-red-500 mb-4">Your opponent has disconnected.</p>
+      )}
+
       {!isMatched && !isSearching && (
-        <button onClick={handleFindMatch}>Versus</button>
+        <button
+          className="bg-blue-500 text-white font-bold py-2 px-4 rounded hover:bg-blue-700 transition duration-300 ease-in-out"
+          onClick={handleFindMatch}
+        >
+          Versus
+        </button>
       )}
-      {isSearching && <p>Searching for an opponent...</p>}
+
+      {isSearching && (
+        <p className="text-gray-600 mb-4">Searching for an opponent...</p>
+      )}
+
       {isMatched && (
-        <>
-          <button onClick={() => handleGameChoice("numbers")}>Numbers</button>
-          <button onClick={() => handleGameChoice("letters")}>Letters</button>
-          <button onClick={handleReady}>Ready</button>
-        </>
+        <div className="space-y-4">
+          <div className="flex space-x-4">
+            <button
+              className={`py-2 px-4 rounded ${gameButtonClass("numbers")}`}
+              onClick={() => handleGameChoice("numbers")}
+            >
+              Numbers
+            </button>
+            <button
+              className={`py-2 px-4 rounded ${gameButtonClass("letters")}`}
+              onClick={() => handleGameChoice("letters")}
+            >
+              Letters
+            </button>
+          </div>
+          <div>
+            <button
+              className={`py-2 px-4 rounded ${opponentReadyButtonClass} ${playerReadyButtonClass}`}
+              onClick={handleReady}
+            >
+              Ready
+            </button>
+          </div>
+        </div>
       )}
-      {gameData && <p>Memorize this: {gameData}</p>}
+
+      {gameData && (
+        <p className="text-gray-700 mt-6">Memorize this: {gameData}</p>
+      )}
     </div>
   );
 };

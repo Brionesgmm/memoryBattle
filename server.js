@@ -84,26 +84,52 @@ io.on("connection", (socket) => {
   socket.on("gameChoice", ({ matchId, playerId, gameType }) => {
     const match = matches[matchId];
     if (match) {
-      // Store the game choice
-      match.gameType = gameType;
+      // Find the index of the player who made the choice
+      const playerIndex = match.players.findIndex(
+        (p) => p.playerId === playerId
+      );
+
+      if (playerIndex !== -1) {
+        // Update the game choice for the player
+        match.players[playerIndex].gameType = gameType;
+
+        // Notify the opponent about the game choice
+        const opponentIndex = playerIndex === 0 ? 1 : 0;
+        const opponent = match.players[opponentIndex];
+        if (opponent) {
+          io.to(opponent.socketId).emit("opponentGameChoice", gameType);
+        }
+      }
     }
   });
 
   socket.on("playerReady", ({ matchId, playerId }) => {
     const match = matches[matchId];
     if (match) {
+      // Find the index of the player who sent the "playerReady" event
       const playerIndex = match.players.findIndex(
         (p) => p.playerId === playerId
       );
+
       if (playerIndex !== -1) {
+        // Mark the player as ready
         match.isReady[playerIndex] = true;
 
-        // Check if both players are ready and have chosen the same game
+        // Notify the opponent about the player's readiness
+        const opponentIndex = playerIndex === 0 ? 1 : 0;
+        const opponent = match.players[opponentIndex];
+        io.to(opponent.socketId).emit("opponentReady");
+
+        // Check if both players are ready
         if (match.isReady.every((r) => r)) {
-          // Both players are ready. Confirm if they have chosen the same game
-          if (match.gameType) {
-            // Start the game
-            const gameData = generateGameData(match.gameType);
+          // Get game choices of both players
+          const playerGameChoice = match.players[0].gameType;
+          const opponentGameChoice = match.players[1].gameType;
+
+          // Check if both players have chosen the same game
+          if (playerGameChoice === opponentGameChoice && playerGameChoice) {
+            // Both players are ready and have chosen the same game. Start the game.
+            const gameData = generateGameData(playerGameChoice);
             match.players.forEach((player) => {
               io.to(player.socketId).emit("startGame", gameData);
             });
@@ -122,6 +148,7 @@ io.on("connection", (socket) => {
   });
 
   socket.on("disconnect", () => {
+    console.log("User disconnected: " + socket.id);
     Object.keys(matches).forEach((matchId) => {
       const match = matches[matchId];
       const playerIndex = match.players.findIndex(
