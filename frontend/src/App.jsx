@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import io from "socket.io-client";
+import Countdown from "./components/Countdown";
 
 const App = () => {
   const [socket, setSocket] = useState(null);
@@ -13,6 +14,8 @@ const App = () => {
   const [opponentGameChoice, setOpponentGameChoice] = useState("");
   const [opponentIsReady, setOpponentIsReady] = useState(false);
   const [playerIsReady, setPlayerIsReady] = useState(false);
+  const [showCountdown, setShowCountdown] = useState(false);
+  const [memorizationData, setMemorizationData] = useState("");
 
   useEffect(() => {
     const newSocket = io("http://localhost:3000");
@@ -27,6 +30,11 @@ const App = () => {
       setPlayerIsReady(false);
       setOpponentGameChoice("");
       setGameType("");
+    });
+
+    newSocket.on("startCountdown", (data) => {
+      setShowCountdown(true);
+      setMemorizationData(data);
     });
 
     newSocket.on("startGame", (data) => {
@@ -75,6 +83,11 @@ const App = () => {
     const playerId = localStorage.getItem("playerId");
     socket.emit("playerReady", { matchId, playerId });
     setPlayerIsReady(true);
+  };
+
+  const handleCountdownComplete = (data) => {
+    setShowCountdown(false);
+    // Transition to memorization screen with the data
   };
 
   const gameButtonClass = (choice) =>
@@ -142,6 +155,14 @@ const App = () => {
             </button>
           </div>
         </div>
+      )}
+
+      {showCountdown && (
+        <Countdown
+          initialCount={10}
+          onComplete={handleCountdownComplete}
+          gameData={memorizationData}
+        />
       )}
 
       {gameData && (

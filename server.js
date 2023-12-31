@@ -131,7 +131,7 @@ io.on("connection", (socket) => {
             // Both players are ready and have chosen the same game. Start the game.
             const gameData = generateGameData(playerGameChoice);
             match.players.forEach((player) => {
-              io.to(player.socketId).emit("startGame", gameData);
+              io.to(player.socketId).emit("startCountdown", gameData);
             });
           }
         }
