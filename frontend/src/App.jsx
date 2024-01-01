@@ -15,7 +15,9 @@ const App = () => {
   const [opponentIsReady, setOpponentIsReady] = useState(false);
   const [playerIsReady, setPlayerIsReady] = useState(false);
   const [showCountdown, setShowCountdown] = useState(false);
+  const [countdown, setCountdown] = useState(10);
   const [memorizationData, setMemorizationData] = useState("");
+  const [isMemorizingPhase, setIsMemorizingPhase] = useState(false);
 
   useEffect(() => {
     const newSocket = io("http://localhost:3000");
@@ -35,6 +37,18 @@ const App = () => {
     newSocket.on("startCountdown", (data) => {
       setShowCountdown(true);
       setMemorizationData(data);
+    });
+
+    newSocket.on("countdownUpdate", (count) => {
+      console.log("Countdown update received:", count);
+      setIsMemorizingPhase(true);
+      if (count > 0) {
+        setShowCountdown(true);
+        setCountdown(count);
+      } else {
+        setShowCountdown(false);
+        // Transition to the memorization phase
+      }
     });
 
     newSocket.on("startGame", (data) => {
@@ -76,6 +90,7 @@ const App = () => {
   const handleGameChoice = (choice) => {
     setGameType(choice);
     const playerId = localStorage.getItem("playerId");
+    console.log(matchId);
     socket.emit("gameChoice", { matchId, playerId, gameType: choice });
   };
 
@@ -104,7 +119,7 @@ const App = () => {
   }`;
 
   const playerReadyButtonClass = `px-4 py-2 rounded ${
-    playerIsReady && gameType ? "border-2 border-green-500" : "bg-gray-200"
+    playerIsReady && gameType ? "border-2 border-green-500" : ""
   }`;
 
   return (
@@ -130,7 +145,7 @@ const App = () => {
         <p className="text-gray-600 mb-4">Searching for an opponent...</p>
       )}
 
-      {isMatched && (
+      {isMatched && !isMemorizingPhase && (
         <div className="space-y-4">
           <div className="flex space-x-4">
             <button
@@ -157,13 +172,7 @@ const App = () => {
         </div>
       )}
 
-      {showCountdown && (
-        <Countdown
-          initialCount={10}
-          onComplete={handleCountdownComplete}
-          gameData={memorizationData}
-        />
-      )}
+      {showCountdown && <div>Countdown: {countdown}</div>}
 
       {gameData && (
         <p className="text-gray-700 mt-6">Memorize this: {gameData}</p>

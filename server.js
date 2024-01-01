@@ -47,22 +47,6 @@ function generateGameData(gameType) {
 io.on("connection", (socket) => {
   console.log("A user connected");
 
-  //   socket.on("findMatch", ({ playerId, gameType }) => {
-  //     if (
-  //       waitingPlayer &&
-  //       waitingPlayer.gameType === gameType &&
-  //       waitingPlayer.playerId !== playerId
-  //     ) {
-  //       const gameData = generateGameData(gameType);
-
-  //       io.to(socket.id).emit("matchFound", "Player 2", gameData);
-  //       io.to(waitingPlayer.socketId).emit("matchFound", "Player 1", gameData);
-
-  //       waitingPlayer = null;
-  //     } else {
-  //       waitingPlayer = { playerId, gameType, socketId: socket.id };
-  //     }
-  //   });
   socket.on("joinMatchmaking", (playerId) => {
     if (!waitingPlayer) {
       waitingPlayer = { playerId, socketId: socket.id };
@@ -74,6 +58,11 @@ io.on("connection", (socket) => {
         isReady: [false, false],
       };
 
+      // Have both players join the room named after the matchId
+      io.to(socket.id).socketsJoin(matchId);
+      io.to(waitingPlayer.socketId).socketsJoin(matchId);
+
+      // Notify both players they've been matched
       io.to(socket.id).emit("matched", matchId);
       io.to(waitingPlayer.socketId).emit("matched", matchId);
 
@@ -122,17 +111,27 @@ io.on("connection", (socket) => {
 
         // Check if both players are ready
         if (match.isReady.every((r) => r)) {
-          // Get game choices of both players
           const playerGameChoice = match.players[0].gameType;
           const opponentGameChoice = match.players[1].gameType;
 
-          // Check if both players have chosen the same game
           if (playerGameChoice === opponentGameChoice && playerGameChoice) {
-            // Both players are ready and have chosen the same game. Start the game.
-            const gameData = generateGameData(playerGameChoice);
-            match.players.forEach((player) => {
-              io.to(player.socketId).emit("startCountdown", gameData);
-            });
+            let countdown = 10;
+            const countdownInterval = setInterval(() => {
+              console.log(
+                `Emitting countdown: ${countdown} for match ${matchId}`
+              );
+              io.to(matchId).emit("countdownUpdate", countdown);
+              countdown--;
+
+              if (countdown < 0) {
+                clearInterval(countdownInterval);
+                const gameData = generateGameData(playerGameChoice);
+                console.log(
+                  `Starting game for match ${matchId} with data: ${gameData}`
+                );
+                io.to(matchId).emit("startGame", gameData);
+              }
+            }, 1000);
           }
         }
       }
