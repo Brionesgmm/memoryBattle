@@ -2,6 +2,14 @@ import React, { useState, useEffect } from "react";
 import io from "socket.io-client";
 import Countdown from "./components/Countdown";
 
+const GamePhase = {
+  WAITING: "waiting",
+  COUNTDOWN: "countdown",
+  MEMORIZING: "memorizing",
+  RECALL: "recall",
+  // Add more phases as needed
+};
+
 const App = () => {
   const [socket, setSocket] = useState(null);
   const [matchId, setMatchId] = useState(null); // State to store matchId
@@ -15,9 +23,9 @@ const App = () => {
   const [opponentIsReady, setOpponentIsReady] = useState(false);
   const [playerIsReady, setPlayerIsReady] = useState(false);
   const [showCountdown, setShowCountdown] = useState(false);
-  const [countdown, setCountdown] = useState(10);
-  const [memorizationData, setMemorizationData] = useState("");
-  const [isMemorizingPhase, setIsMemorizingPhase] = useState(false);
+  const [countdown, setCountdown] = useState(5);
+  const [memCountdown, setMemCountdown] = useState(60);
+  const [currentPhase, setCurrentPhase] = useState(GamePhase.WAITING);
 
   useEffect(() => {
     const newSocket = io("http://localhost:3000");
@@ -34,26 +42,34 @@ const App = () => {
       setGameType("");
     });
 
-    newSocket.on("startCountdown", (data) => {
-      setShowCountdown(true);
-      setMemorizationData(data);
-    });
+    // newSocket.on("startCountdown", (data) => {
+    //   setShowCountdown(true);
+    //   setMemorizationData(data);
+    //   setCurrentPhase(GamePhase.COUNTDOWN);
+    // });
 
     newSocket.on("countdownUpdate", (count) => {
       console.log("Countdown update received:", count);
-      setIsMemorizingPhase(true);
+      setCurrentPhase(GamePhase.COUNTDOWN);
       if (count > 0) {
-        setShowCountdown(true);
         setCountdown(count);
       } else {
         setShowCountdown(false);
-        // Transition to the memorization phase
+        setCurrentPhase(GamePhase.MEMORIZING);
       }
     });
 
     newSocket.on("startGame", (data) => {
-      // Handle the game start here
       setGameData(data);
+      setCurrentPhase(GamePhase.MEMORIZING);
+    });
+
+    newSocket.on("memorizationCountdownUpdate", (count) => {
+      setMemCountdown(count);
+      if (count <= 0) {
+        // Transition to the next phase (e.g., recall phase)
+        setCurrentPhase(GamePhase.RECALL);
+      }
     });
 
     newSocket.on("opponentGameChoice", (choice) => {
@@ -145,7 +161,7 @@ const App = () => {
         <p className="text-gray-600 mb-4">Searching for an opponent...</p>
       )}
 
-      {isMatched && !isMemorizingPhase && (
+      {isMatched && currentPhase === GamePhase.WAITING && (
         <div className="space-y-4">
           <div className="flex space-x-4">
             <button
@@ -172,10 +188,15 @@ const App = () => {
         </div>
       )}
 
-      {showCountdown && <div>Countdown: {countdown}</div>}
+      {currentPhase === GamePhase.COUNTDOWN && (
+        <div>Countdown: {countdown}</div>
+      )}
 
-      {gameData && (
-        <p className="text-gray-700 mt-6">Memorize this: {gameData}</p>
+      {currentPhase === GamePhase.MEMORIZING && (
+        <div>
+          <div>Memorization Countdown: {memCountdown}</div>
+          <p className="text-gray-700 mt-6">Memorize this: {gameData}</p>
+        </div>
       )}
     </div>
   );

@@ -115,7 +115,7 @@ io.on("connection", (socket) => {
           const opponentGameChoice = match.players[1].gameType;
 
           if (playerGameChoice === opponentGameChoice && playerGameChoice) {
-            let countdown = 10;
+            let countdown = 5;
             const countdownInterval = setInterval(() => {
               console.log(
                 `Emitting countdown: ${countdown} for match ${matchId}`
@@ -130,6 +130,23 @@ io.on("connection", (socket) => {
                   `Starting game for match ${matchId} with data: ${gameData}`
                 );
                 io.to(matchId).emit("startGame", gameData);
+                // Start the 60-second memorization countdown
+                let memorizationCountdown = 59;
+                const memorizationInterval = setInterval(() => {
+                  console.log(
+                    `Memorization countdown: ${memorizationCountdown} for match ${matchId}`
+                  );
+                  io.to(matchId).emit(
+                    "memorizationCountdownUpdate",
+                    memorizationCountdown
+                  );
+                  memorizationCountdown--;
+
+                  if (memorizationCountdown < 0) {
+                    clearInterval(memorizationInterval);
+                    // Proceed to the next phase of the game
+                  }
+                }, 1000);
               }
             }, 1000);
           }
