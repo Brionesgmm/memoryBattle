@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import io from "socket.io-client";
-import Countdown from "./components/Countdown";
+import MemorizationScreen from "./components/MemorizationScreen";
 
 const GamePhase = {
   WAITING: "waiting",
@@ -26,6 +26,9 @@ const App = () => {
   const [countdown, setCountdown] = useState(5);
   const [memCountdown, setMemCountdown] = useState(60);
   const [currentPhase, setCurrentPhase] = useState(GamePhase.WAITING);
+  const [beginMemTime, setBeginMemtime] = useState(0);
+  const [endMemTime, setEndMemtime] = useState(0);
+  const [finalMemTime, setFinalMemTime] = useState(0);
 
   useEffect(() => {
     const newSocket = io("http://localhost:3000");
@@ -62,6 +65,7 @@ const App = () => {
     newSocket.on("startGame", (data) => {
       setGameData(data);
       setCurrentPhase(GamePhase.MEMORIZING);
+      setBeginMemtime(Date.now());
     });
 
     newSocket.on("memorizationCountdownUpdate", (count) => {
@@ -194,8 +198,17 @@ const App = () => {
 
       {currentPhase === GamePhase.MEMORIZING && (
         <div>
-          <div>Memorization Countdown: {memCountdown}</div>
-          <p className="text-gray-700 mt-6">Memorize this: {gameData}</p>
+          {!endMemTime && <div>Memorization Countdown: {memCountdown}</div>}
+
+          <div>{finalMemTime}</div>
+          <MemorizationScreen
+            gameData={gameData}
+            memorizationTime={memCountdown}
+            setEndMemtime={setEndMemtime}
+            beginMemTime={beginMemTime}
+            endMemTime={endMemTime}
+            setFinalMemTime={setFinalMemTime}
+          />
         </div>
       )}
     </div>
