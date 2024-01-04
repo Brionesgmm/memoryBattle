@@ -144,7 +144,22 @@ io.on("connection", (socket) => {
 
                   if (memorizationCountdown < 0) {
                     clearInterval(memorizationInterval);
-                    // Proceed to the next phase of the game
+
+                    // Start the 10-second recall countdown
+                    let recallCountdown = 10;
+                    const recallInterval = setInterval(() => {
+                      io.to(matchId).emit(
+                        "recallCountdownUpdate",
+                        recallCountdown
+                      );
+                      recallCountdown--;
+
+                      if (recallCountdown < 0) {
+                        clearInterval(recallInterval);
+                        // Proceed to the actual recall phase
+                        io.to(matchId).emit("startRecallPhase", matchId);
+                      }
+                    }, 1000);
                   }
                 }, 1000);
               }

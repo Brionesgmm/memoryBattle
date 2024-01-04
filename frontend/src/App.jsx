@@ -25,6 +25,7 @@ const App = () => {
   const [showCountdown, setShowCountdown] = useState(false);
   const [countdown, setCountdown] = useState(5);
   const [memCountdown, setMemCountdown] = useState(60);
+  const [recallCountdown, setRecallCountdown] = useState(10);
   const [currentPhase, setCurrentPhase] = useState(GamePhase.WAITING);
   const [beginMemTime, setBeginMemtime] = useState(0);
   const [endMemTime, setEndMemtime] = useState(0);
@@ -73,6 +74,13 @@ const App = () => {
       if (count <= 0) {
         // Transition to the next phase (e.g., recall phase)
         setCurrentPhase(GamePhase.RECALL);
+      }
+    });
+
+    newSocket.on("recallCountdownUpdate", (count) => {
+      setCurrentPhase(GamePhase.RECALL);
+      if (count > 0) {
+        setRecallCountdown(count);
       }
     });
 
@@ -209,6 +217,15 @@ const App = () => {
             endMemTime={endMemTime}
             setFinalMemTime={setFinalMemTime}
           />
+        </div>
+      )}
+
+      {currentPhase === GamePhase.RECALL && (
+        <div>
+          <div>
+            Recall Countdown: {recallCountdown} {finalMemTime}
+          </div>
+          {/* Render the recall phase content here */}
         </div>
       )}
     </div>
