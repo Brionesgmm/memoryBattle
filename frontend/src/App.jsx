@@ -1,12 +1,16 @@
 import React, { useState, useEffect } from "react";
 import io from "socket.io-client";
 import MemorizationScreen from "./components/MemorizationScreen";
+import RecallScreen from "./components/RecallScreen";
+import ResultStage from "./components/ResultStage";
 
 const GamePhase = {
   WAITING: "waiting",
   COUNTDOWN: "countdown",
   MEMORIZING: "memorizing",
+  RECALLCOUNTDOWN: "recallCountdown",
   RECALL: "recall",
+  RESULT: "result",
   // Add more phases as needed
 };
 
@@ -25,11 +29,16 @@ const App = () => {
   const [showCountdown, setShowCountdown] = useState(false);
   const [countdown, setCountdown] = useState(5);
   const [memCountdown, setMemCountdown] = useState(60);
-  const [recallCountdown, setRecallCountdown] = useState(10);
+  const [recallCountdown, setRecallCountdown] = useState(5);
   const [currentPhase, setCurrentPhase] = useState(GamePhase.WAITING);
   const [beginMemTime, setBeginMemtime] = useState(0);
   const [endMemTime, setEndMemtime] = useState(0);
   const [finalMemTime, setFinalMemTime] = useState(0);
+  const [recallStageCountdown, setRecallStageCountdown] = useState(10);
+  const [beginRecallTime, setBeginRecalltime] = useState(0);
+  const [endRecallTime, setEndRecalltime] = useState(0);
+  const [finalRecallTime, setFinalRecallTime] = useState(0);
+  const [playerInputs, setPlayerInputs] = useState([]);
 
   useEffect(() => {
     const newSocket = io("http://localhost:3000");
@@ -73,15 +82,26 @@ const App = () => {
       setMemCountdown(count);
       if (count <= 0) {
         // Transition to the next phase (e.g., recall phase)
-        setCurrentPhase(GamePhase.RECALL);
+        setCurrentPhase(GamePhase.RECALLCOUNTDOWN);
       }
     });
 
     newSocket.on("recallCountdownUpdate", (count) => {
-      setCurrentPhase(GamePhase.RECALL);
-      if (count > 0) {
-        setRecallCountdown(count);
+      setRecallCountdown(count);
+      if (count <= 0) {
+        setCurrentPhase(GamePhase.RECALL);
       }
+    });
+
+    newSocket.on("startRecallPhase", (count) => {
+      setRecallStageCountdown(count);
+      if (count <= 0) {
+        setCurrentPhase(GamePhase.RESULT);
+      }
+    });
+
+    newSocket.on("resultPhase", () => {
+      setCurrentPhase(GamePhase.RESULT);
     });
 
     newSocket.on("opponentGameChoice", (choice) => {
@@ -220,12 +240,28 @@ const App = () => {
         </div>
       )}
 
-      {currentPhase === GamePhase.RECALL && (
+      {currentPhase === GamePhase.RECALLCOUNTDOWN && (
         <div>
           <div>
             Recall Countdown: {recallCountdown} {finalMemTime}
           </div>
-          {/* Render the recall phase content here */}
+        </div>
+      )}
+
+      {currentPhase === GamePhase.RECALL && (
+        <div>
+          <RecallScreen
+            recallStageCountdown={recallStageCountdown}
+            playerInputs={playerInputs}
+            setPlayerInputs={setPlayerInputs}
+            gameData={gameData}
+          />
+        </div>
+      )}
+
+      {currentPhase === GamePhase.RESULT && (
+        <div>
+          <ResultStage playerInputs={playerInputs} gameData={gameData} />
         </div>
       )}
     </div>

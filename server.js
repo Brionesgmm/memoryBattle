@@ -131,7 +131,7 @@ io.on("connection", (socket) => {
                 );
                 io.to(matchId).emit("startGame", gameData);
                 // Start the 60-second memorization countdown
-                let memorizationCountdown = 59;
+                let memorizationCountdown = 5;
                 const memorizationInterval = setInterval(() => {
                   console.log(
                     `Memorization countdown: ${memorizationCountdown} for match ${matchId}`
@@ -146,7 +146,7 @@ io.on("connection", (socket) => {
                     clearInterval(memorizationInterval);
 
                     // Start the 10-second recall countdown
-                    let recallCountdown = 10;
+                    let recallCountdown = 4;
                     const recallInterval = setInterval(() => {
                       io.to(matchId).emit(
                         "recallCountdownUpdate",
@@ -157,7 +157,21 @@ io.on("connection", (socket) => {
                       if (recallCountdown < 0) {
                         clearInterval(recallInterval);
                         // Proceed to the actual recall phase
-                        io.to(matchId).emit("startRecallPhase", matchId);
+                        let recallStageCountdown = 10;
+                        const recallStageInterval = setInterval(() => {
+                          io.to(matchId).emit(
+                            "startRecallPhase",
+                            recallStageCountdown
+                          );
+                          recallStageCountdown--;
+
+                          if (recallStageCountdown < 0) {
+                            clearInterval(recallStageInterval);
+                            // Proceed to result phase
+
+                            io.to(matchId).emit("resultPhase", matchId);
+                          }
+                        }, 1000);
                       }
                     }, 1000);
                   }
